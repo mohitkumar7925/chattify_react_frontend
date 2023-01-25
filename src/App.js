@@ -12,7 +12,7 @@ function App() {
       const isLogin = useSelector((state) => state.userReducer.isLogin);
 
       return (
-            <div className="w-full min-h-screen bg-black">
+            <div className="flex h-screen bg-black">
                   <Router>
                         {isLogin ? (
                               <Routes>

@@ -27,7 +27,9 @@ export const Login = () => {
                         console.log(res.data);
                         if (res.data?.status) {
                               dispatch(login_status(true))
-                              localStorage.setItem("user", res.data.user);
+                              localStorage.setItem("user", JSON.stringify(res.data.data));
+                              console.log('saved user ',res.data.data);
+                              
                               toast(res?.data?.message);
                               
                         } else {
