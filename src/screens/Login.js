@@ -50,7 +50,9 @@ export const Login = () => {
       };
 
       return (
-            <div className=" flex flex-col flex-1" style={{ backgroundImage: `linear-gradient(rgba(135, 80, 156, 0.2), rgba(135, 80, 156, 0.3)), url(login_back.jpg)` }}>
+            <div className=" flex flex-col flex-1"
+             style={{ backgroundImage: `linear-gradient(rgba(135, 80, 156, 0.2), rgba(135, 80, 156, 0.3)), url(login_back.jpg)` }}
+             >
                   <div className="p-10 bg-black m-auto rounded-xl mt-[10%] flex flex-col gap-3 z-10 md:w-[400px]">
                         <h4 className=" font-semibold text-2xl mb-2 text-white">Login</h4>
                         {!loginTab && <TextInput placeholder="Name" value={name} onChange={(val) => setName(val.target.value)} />}
