@@ -10,34 +10,35 @@ import { Axios } from "../utils/Axios";
 export const Login = () => {
       const [mobile, setMobile] = useState("");
       const [password, setPassword] = useState("");
+      const [name, setName] = useState("");
       const [isLoading, setIsLoading] = useState(false);
+      const [loginTab, setLoginTab] = useState(true);
 
       const dispatch = useDispatch();
 
       const onSubmit = async () => {
-            
-            if (mobile != "" && password != "") {
+            if (mobile != "" && password != "" && (loginTab || name != '' )) {
                   try {
                         setIsLoading(true);
-                        let res = await Axios.post("login", {
+                        let res = await Axios.post(loginTab ? "login" : 'signup', {
                               mobile,
                               password,
+                              name
                         });
                         setIsLoading(false);
                         console.log(res.data);
                         if (res.data?.status) {
-                              dispatch(login_status(true))
+                              dispatch(login_status(true));
                               localStorage.setItem("user", JSON.stringify(res.data.data));
-                              console.log('saved user ',res.data.data);
-                              
+                              console.log("saved user ", res.data.data);
+
                               toast(res?.data?.message);
-                              
                         } else {
-                            dispatch(login_status(false))
+                              dispatch(login_status(false));
                               toast(res?.data?.message, { type: "error" });
                         }
                   } catch (error) {
-                    dispatch(login_status(false))
+                        dispatch(login_status(false));
                         setIsLoading(false);
                         console.log(error);
                         toast(error?.toString(), { type: "error" });
@@ -49,9 +50,10 @@ export const Login = () => {
       };
 
       return (
-            <div className=" h-screen flex flex-col " style={{ backgroundImage: `linear-gradient(rgba(135, 80, 156, 0.2), rgba(135, 80, 156, 0.3)), url(login_back.jpg)` }}>
-                  <div className="p-10 bg-black m-auto rounded-xl mt-[10%] flex flex-col gap-5  z-10 md:w-[400px]">
-                        <h4 className=" font-semibold text-2xl text-white">Login</h4>
+            <div className=" flex flex-col flex-1" style={{ backgroundImage: `linear-gradient(rgba(135, 80, 156, 0.2), rgba(135, 80, 156, 0.3)), url(login_back.jpg)` }}>
+                  <div className="p-10 bg-black m-auto rounded-xl mt-[10%] flex flex-col gap-3 z-10 md:w-[400px]">
+                        <h4 className=" font-semibold text-2xl mb-2 text-white">Login</h4>
+                        {!loginTab && <TextInput placeholder="Name" value={name} onChange={(val) => setName(val.target.value)} />}
                         <TextInput
                               placeholder="Mobile Number"
                               value={mobile}
@@ -63,11 +65,27 @@ export const Login = () => {
 
                         <Button
                               onClick={() => {
-                                    console.log(".....");
-                                    onSubmit();
+
+                                          onSubmit();
+                                   
                               }}
+                              className="mt-5"
                         >
-                              Login
+                              {loginTab ? "Login" : "Signup"}
+                        </Button>
+                        <div className="text-gray-300 text-sm text-center">OR</div>
+                        <Button
+                              outline={true}
+                              onClick={() => {
+                                    if (loginTab) {
+                                          setLoginTab(false);
+                                    } else {
+                                          setLoginTab(true);
+                                    }
+                              }}
+                              className="mt-0"
+                        >
+                              {!loginTab ? "Login" : "Signup"}
                         </Button>
                   </div>
                   {isLoading && <Loader />}
