@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useState } from "react";
+import React, { useCallback, useEffect, useRef, useState } from "react";
 import {
     IoIosArrowDropright,
     IoMdAdd,
@@ -28,12 +28,22 @@ export const Dashboard = () => {
     const [newMobile, setNewMobile] = useState("");
     const [toUser, setToUser] = useState("");
     const [chatID, setChatID] = useState("");
+    const [updater, setUpdater] = useState(123.4543)
     const dispatch = useDispatch();
     const [newContactModal, setNewContactModal] = useState(false);
     const [isConnected, setIsConnected] = useState(false);
+    const [newMessage, setNewMessage] = useState(null)
+    const scrollRef = useRef()
 
-    const addMessage = useCallback(
+
+    const scrollToBottom = () => {
+        if(scrollRef.current)
+        scrollRef.current.scrollIntoView({ behavior: "smooth" });
+      }
+
+    const addMessage = 
         (res) => {
+            console.log(res?.chat_id , chatID);
             if (res?.chat_id == chatID)
                 setExtendHistory((prev) => [...prev, res]);
             setUserList((prev) => {
@@ -56,10 +66,12 @@ export const Dashboard = () => {
                   console.log('--->>newArr After',newArr);
                 return [...newArr];
             });
-        },
-        [extendHistory, userList, chatID]
-    );
-console.log('userlist',userList);
+            scrollToBottom()
+        }
+        // [extendHistory, userList, chatID , updater]
+    // );
+console.log('chatid',chatID);
+console.log('updater',updater);
     // const initialize = () => {
 
     //       const socket = io("http://10.1.4.1:4001");
@@ -81,6 +93,13 @@ console.log('userlist',userList);
     //             addMessage(res);
     //       });
     // };
+    useEffect(() => {
+      if(newMessage){
+        addMessage(newMessage)
+      }
+    
+    }, [newMessage])
+    
 
     useEffect(() => {
         getUserList();
@@ -101,7 +120,8 @@ console.log('userlist',userList);
 
         socket.on(iam.user_id, (res) => {
             console.log("Message received", res);
-            addMessage(res);
+            // addMessage(res);
+            setNewMessage(res)
         });
 
         // initialize();
@@ -175,6 +195,8 @@ console.log('userlist',userList);
                 setChatHistory(res.data.chatHistory);
                 setNewMobile("");
                 setChatID(res.data.chat_id);
+                setUpdater(Math.random()* 100)
+                scrollToBottom()
                 // toast(res.data.message, { type: "success" });
             } else {
                 setChatHistory([]);
@@ -191,6 +213,7 @@ console.log('userlist',userList);
     return (
         <div className="  bg-purple-900 flex-1 pb-10 flex"  style={{ backgroundImage: `linear-gradient(rgba(135, 80, 156, 0.2), rgba(135, 80, 156, 0.3)), url(login_back.jpg)` }}
         >
+           
             {newContactModal && (
                 <Overlay>
                     <IoMdClose
@@ -283,26 +306,26 @@ console.log('userlist',userList);
                                 );
                             })
                         :
-                        <div className="text-xs text-gray-50">Lets starts your first chat.</div>
+                        <div className="text-md text-gray-50">Lets starts your first chat.</div>
                         }
                         </div>
                         <div
                             onClick={() => setNewContactModal(true)}
                             className="static p-1.5 m-3 bg-teal-600 self-end rounded-full"
                         >
-                            <IoMdAdd className="text-black " />
+                            <IoMdAdd className="text-black "  size={28}/>
                         </div>
                     </div>
 
-                    <div
-                        className={`w-full flex  flex-row m-1 sm:w-[70%]  items-center justify-center  ${
-                            toUser != "" ? "hidden" : ""
-                        }`}
+                    {/* <div
+                        className={`hidden sm:flex flex-row m-1  items-center justify-center absolute self-center
+                        ${toUser == '' ? '':'hidden'}
+                        `}
                     >
                             <img src="chat.png" className="w-10 mr-2"/>
                             <div className="text-3xl text-white"> Chattify</div>
 
-                    </div>
+                    </div>     */}
                     <div
                         className={`w-full flex  flex-col m-1 sm:w-[70%] bg-[#000000]  rounded-3xl ${
                             toUser != "" ? "" : "hidden"
@@ -338,13 +361,21 @@ console.log('userlist',userList);
                                             </div>
                                         );
                                     })}
+                                    <div ref={scrollRef} style={{float:"left" , clear:'both' , height:25 }}/>
                             </div>
                         </div>
-                        <div className="justify-between flex  flex-row items-center m-2 text-white bg-gray-900 px-5 py-3 rounded-3xl ">
+                        <form
+                        onSubmit={e=>{
+                            e.preventDefault()
+                            sendMessage()
+                        }}
+                        className="justify-between flex  flex-row items-center m-2 text-white bg-gray-900 px-5 py-3 rounded-3xl ">
+                           
                             <input
                                 value={message}
                                 onChange={(val) => setMessage(val.target.value)}
                                 type={"text"}
+                                onSubmit={()=>sendMessage()}
                                 placeholder="Message..."
                                 className="bg-transparent outline-none hover:outline-none grow"
                             />
@@ -354,10 +385,13 @@ console.log('userlist',userList);
                                     sendMessage();
                                 }}
                             />
-                        </div>
+                        </form>
+
                     </div>
                 </div>
+                
             </div>
+           
         </div>
     );
 };
