@@ -63,7 +63,7 @@ export const Login = () => {
                                     setMobile(val.target.value);
                               }}
                         />
-                        <TextInput placeholder="Password" value={password} onChange={(val) => setPassword(val.target.value)} />
+                        <TextInput placeholder="Password" type="password" value={password} onChange={(val) => setPassword(val.target.value)} />
 
                         <Button
                               onClick={() => {

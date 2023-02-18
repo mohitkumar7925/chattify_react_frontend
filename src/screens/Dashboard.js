@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useRef, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import {
     IoIosArrowDropright,
     IoMdAdd,
@@ -7,6 +7,7 @@ import {
     IoMdExit,
     IoMdSend,
 } from "react-icons/io";
+import { TiTick } from "react-icons/ti";
 import { useDispatch } from "react-redux";
 import { toast } from "react-toastify";
 import { io } from "socket.io-client";
@@ -28,78 +29,56 @@ export const Dashboard = () => {
     const [newMobile, setNewMobile] = useState("");
     const [toUser, setToUser] = useState("");
     const [chatID, setChatID] = useState("");
-    const [updater, setUpdater] = useState(123.4543)
+    const [updater, setUpdater] = useState(123.4543);
     const dispatch = useDispatch();
     const [newContactModal, setNewContactModal] = useState(false);
     const [isConnected, setIsConnected] = useState(false);
-    const [newMessage, setNewMessage] = useState(null)
-    const scrollRef = useRef()
-
+    const [newMessage, setNewMessage] = useState(null);
+    const scrollRef = useRef();
+    const [newName, setNewName] = useState("");
+    const [profileModal, setProfileModal] = useState(false);
 
     const scrollToBottom = () => {
-        if(scrollRef.current)
-        scrollRef.current.scrollIntoView({ behavior: "smooth" });
-      }
+        if (scrollRef.current)
+            scrollRef.current.scrollIntoView({ behavior: "smooth" });
+    };
 
-    const addMessage = 
-        (res) => {
-            console.log(res?.chat_id , chatID);
-            if (res?.chat_id == chatID)
-                setExtendHistory((prev) => [...prev, res]);
-            setUserList((prev) => {
-                let oldArr = prev;
-                let isUser = false;
-                let newArr = oldArr.map((item, index) => {
-                    if (item?.chat_id == res?.chat_id) {
-                        // item?.message = res?.message
-                        isUser = true;
-                        item['new'] = true;
-                        return { ...item, message: res?.message };
-                    }
+    const addMessage = (res) => {
+        console.log(res?.chat_id, chatID);
+        if (res?.chat_id == chatID) setExtendHistory((prev) => [...prev, res]);
+        setUserList((prev) => {
+            let oldArr = prev;
+            let isUser = false;
+            let newArr = oldArr.map((item, index) => {
+                if (item?.chat_id == res?.chat_id) {
+                    // item?.message = res?.message
+                    isUser = true;
+                    let messageCount = item?.new || 0;
+                    if (chatID != res?.chat_id) item["new"] = messageCount + 1;
 
-                    return item;
-                });
-                console.log('--->>newArr',newArr);
-                if (!isUser) {
-                      newArr.splice(0, 0, res);
-                  }
-                  console.log('--->>newArr After',newArr);
-                return [...newArr];
+                    return { ...item, message: res?.message };
+                }
+
+                return item;
             });
-            scrollToBottom()
-        }
-        // [extendHistory, userList, chatID , updater]
-    // );
-console.log('chatid',chatID);
-console.log('updater',updater);
-    // const initialize = () => {
+            console.log("--->>newArr", newArr);
+            if (!isUser) {
+                newArr.splice(0, 0, res);
+            }
+            console.log("--->>newArr After", newArr);
+            return [...newArr];
+        });
+        setTimeout(() => {
+            
+            scrollToBottom();
+        }, 100);
+    };
 
-    //       const socket = io("http://10.1.4.1:4001");
-
-    //       socket.on("connect", (sock) => {
-    //             console.log("connect");
-    //             setIsConnected(true);
-    //       });
-
-    //       socket.on("disconnect", () => {
-    //             setIsConnected(false);
-    //             console.log("disconnect");
-    //       });
-    //       let iam = JSON.parse(localStorage.getItem("user"));
-    //       setUser(iam);
-
-    //       socket.on(iam.user_id, (res) => {
-    //             console.log("Message received", res);
-    //             addMessage(res);
-    //       });
-    // };
     useEffect(() => {
-      if(newMessage){
-        addMessage(newMessage)
-      }
-    
-    }, [newMessage])
-    
+        if (newMessage) {
+            addMessage(newMessage);
+        }
+    }, [newMessage]);
 
     useEffect(() => {
         getUserList();
@@ -121,7 +100,7 @@ console.log('updater',updater);
         socket.on(iam.user_id, (res) => {
             console.log("Message received", res);
             // addMessage(res);
-            setNewMessage(res)
+            setNewMessage(res);
         });
 
         // initialize();
@@ -133,6 +112,7 @@ console.log('updater',updater);
 
     const sendMessage = () => {
         console.log("send message ", message);
+        if (message.trim() == "") return;
         let data = {
             message: message,
             fromUser_id: user?.user_id,
@@ -167,18 +147,51 @@ console.log('updater',updater);
         }
     };
 
+    const updateProfile = async () => {
+        try {
+            if (newName?.trim() != "") {
+                setIsloading(true);
+                let res = await Axios.post("updateProfile", {
+                    mobile: user?.mobile,
+                    password: user?.password,
+                    newName,
+                });
+
+                if (res.data?.status) {
+                    localStorage.setItem(
+                        "user",
+                        JSON.stringify(res.data?.data)
+                    );
+                    let iam = JSON.parse(localStorage.getItem("user"));
+                    setUser(iam);
+                    toast(res.data?.message, { type: "success" });
+                    setProfileModal(false);
+                } else {
+                    toast(res.data?.message, { type: "error" });
+                }
+                setIsloading(false);
+            } else {
+                toast("Please enter a valid name", { type: "warning" });
+            }
+        } catch (error) {
+            setIsloading(false);
+            console.log("error", error);
+            toast(error, { type: "error" });
+        }
+    };
+
     const getChatId = async (item) => {
         try {
-            setUserList(prev=>{
-                  let newList = prev.map(el=>{
-                        if(item?.chat_id == el?.chat_id){
-                              el['new'] = false
-                        }
-                        return el
+            setUserList((prev) => {
+                let newList = prev.map((el) => {
+                    if (item?.chat_id == el?.chat_id) {
+                        el["new"] = false;
+                    }
+                    return el;
+                });
+                return newList;
+            });
 
-                  })
-                  return prev
-            })
             setIsloading(true);
             setToUser(item);
             console.log(item);
@@ -195,8 +208,10 @@ console.log('updater',updater);
                 setChatHistory(res.data.chatHistory);
                 setNewMobile("");
                 setChatID(res.data.chat_id);
-                setUpdater(Math.random()* 100)
-                scrollToBottom()
+                setUpdater(Math.random() * 100);
+                setTimeout(() => {
+                    scrollToBottom();
+                }, 300);
                 // toast(res.data.message, { type: "success" });
             } else {
                 setChatHistory([]);
@@ -211,9 +226,12 @@ console.log('updater',updater);
     };
 
     return (
-        <div className="  bg-purple-900 flex-1 pb-10 flex"  style={{ backgroundImage: `linear-gradient(rgba(135, 80, 156, 0.2), rgba(135, 80, 156, 0.3)), url(login_back.jpg)` }}
+        <div
+            className="  bg-purple-900 flex-1 pb-10 flex"
+            style={{
+                backgroundImage: `linear-gradient(rgba(135, 80, 156, 0.2), rgba(135, 80, 156, 0.3)), url(login_back.jpg)`,
+            }}
         >
-           
             {newContactModal && (
                 <Overlay>
                     <IoMdClose
@@ -246,13 +264,44 @@ console.log('updater',updater);
                     </div>
                 </Overlay>
             )}
+            {profileModal && (
+                <Overlay>
+                    <IoMdClose
+                        onClick={() => {
+                            setProfileModal(false);
+                        }}
+                        className="text-white mb-3 -mt-10 "
+                    />
+                    <div className="flex flex-row justify-between  max-w-[300px] w-[80%] p-3 bg-gray-800 bg-opacity-75 rounded-lg  text-white">
+                        <input
+                            placeholder="Enter New Name"
+                            className="bg-transparent outline-none"
+                            value={newName}
+                            onChange={(e) => {
+                                setNewName(e.target.value);
+                            }}
+                        />
+                        <div
+                            onClick={() => {
+                                if (newName != "") {
+                                    updateProfile();
+                                } else {
+                                    toast("Please enter new name");
+                                }
+                            }}
+                        >
+                            <TiTick size={24} />
+                        </div>
+                    </div>
+                </Overlay>
+            )}
             {(!isConnected || isloading) && <Loader />}
             <div className="flex flex-col grow container mx-auto">
                 <div className="flex flex-row justify-between items-center text-white px-3 pt-4">
-                  <div className="flex flex-row">
-                  <img src="chat.png" className="w-10 mr-2"/>
-                    <div className="font-semibold  text-2xl">Chattify</div>
-                  </div>
+                    <div className="flex flex-row">
+                        <img src="chat.png" className="w-10 mr-2" />
+                        <div className="font-semibold  text-2xl">Chattify</div>
+                    </div>
                     <div
                         className="flex-row flex items-center text-sm"
                         onClick={() => {
@@ -274,46 +323,76 @@ console.log('updater',updater);
                                     border-opacity-30 m-3"
                         >
                             <img src="logo192.png" className="w-6" />
-                            <div className="pl-3 text-sm text-white">
-                                {user?.name || user?.mobile}
+                            <div
+                                onClick={() => {
+                                    setNewName(user?.name);
+                                    setProfileModal(true);
+                                }}
+                            >
+                                <div className="pl-3 text-sm text-white">
+                                    {user?.name || user?.mobile}
+                                </div>
+                                <div className="pl-3 text-xs text-gray-400">
+                                    {user?.mobile}
+                                </div>
                             </div>
                         </div>
-                        <div className={` mx-2 rounded-3xl flex  flex-col pb-1 flex-1 ${userList?.length == 0 ? 'items-center justify-center':''}`}>
-                            
-                            {userList?.length > 0 ? userList.map((item, index) => {
-                                return (
-                                    <div
-                                        onClick={() => getChatId(item)}
-                                        className="my-1 py-1 px-3 flex flex-row items-center 
+                        <div
+                            className={` mx-2 rounded-3xl flex  flex-col pb-1 flex-1 ${
+                                userList?.length == 0
+                                    ? "items-center justify-center"
+                                    : ""
+                            }`}
+                        >
+                            {userList?.length > 0 ? (
+                                userList.map((item, index) => {
+                                    return (
+                                        <div
+                                            onClick={() => getChatId(item)}
+                                            className="my-1 py-1 px-3 flex flex-row items-center 
                                                       border border-opacity-0 border-purple-300
                                                       hover:border-opacity-20 hover:bg-white transition-all
                                                       rounded-2xl text-white hover:text-black"
-                                    >
-                                        <img
-                                            src="logo192.png"
-                                            className={`w-8 object-contain border ${item?.new ? 'border-green-500' : 'border-gray-700'}  rounded-full p-1`}
-                                        />
-                                        <div className="pl-3">
-                                            <div className="text-sm  ">
-                                                {item?.name || item?.mobile}
+                                        >
+                                            <img
+                                                src="logo192.png"
+                                                className={`w-8 object-contain  rounded-full p-1`}
+                                            />
+                                            <div className="pl-3">
+                                                <div className="text-sm  ">
+                                                    {item?.name || item?.mobile}
+                                                </div>
+                                                <div
+                                                    className={`text-xs text-gray-400 ${
+                                                        item?.new
+                                                            ? "font-extrabold"
+                                                            : ""
+                                                    }`}
+                                                >
+                                                    {item?.message}
+                                                </div>
                                             </div>
-                                            <div className={`text-xs text-gray-400 ${item?.new ? 'font-extrabold' :''}`}>
-                                                {item?.message}
+                                            <div className="flex-1 flex justify-end  text-xs ">
+                                                {item?.new && (
+                                                    <div className=" p-0.5 h-5 w-5 border-green-500 border rounded-full items-center text-center">
+                                                        {item?.new}
+                                                    </div>
+                                                )}
                                             </div>
                                         </div>
-
-                                    </div>
-                                );
-                            })
-                        :
-                        <div className="text-md text-gray-50">Lets starts your first chat.</div>
-                        }
+                                    );
+                                })
+                            ) : (
+                                <div className="text-md text-gray-50">
+                                    Lets starts your first chat.
+                                </div>
+                            )}
                         </div>
                         <div
                             onClick={() => setNewContactModal(true)}
-                            className="static p-1.5 m-3 bg-teal-600 self-end rounded-full"
+                            className="static p-1.5 m-3 bg-teal-600 shadow-sm shadow-gray-600 self-end rounded-full"
                         >
-                            <IoMdAdd className="text-black "  size={28}/>
+                            <IoMdAdd className="text-black " size={20} />
                         </div>
                     </div>
 
@@ -355,27 +434,34 @@ console.log('updater',updater);
                                                 {item?.message}
                                             </div>
                                         ) : (
-                                            <div className="self-end transition-all  bg-green-900 bg-opacity-80 px-2 py-1 rounded-l-lg rounded-b-lg my-1">
+                                            <div className="self-end duration-300 transition-all  bg-green-900 bg-opacity-80 px-2 py-1 rounded-l-lg rounded-b-lg my-1">
                                                 {" "}
                                                 {item?.message}
                                             </div>
                                         );
                                     })}
-                                    <div ref={scrollRef} style={{float:"left" , clear:'both' , height:25 }}/>
+                                <div
+                                    ref={scrollRef}
+                                    style={{
+                                        float: "left",
+                                        clear: "both",
+                                        height: 25,
+                                    }}
+                                />
                             </div>
                         </div>
                         <form
-                        onSubmit={e=>{
-                            e.preventDefault()
-                            sendMessage()
-                        }}
-                        className="justify-between flex  flex-row items-center m-2 text-white bg-gray-900 px-5 py-3 rounded-3xl ">
-                           
+                            onSubmit={(e) => {
+                                e.preventDefault();
+                                sendMessage();
+                            }}
+                            className="justify-between flex  flex-row items-center m-2 text-white bg-gray-900 px-5 py-3 rounded-3xl "
+                        >
                             <input
                                 value={message}
                                 onChange={(val) => setMessage(val.target.value)}
                                 type={"text"}
-                                onSubmit={()=>sendMessage()}
+                                onSubmit={() => sendMessage()}
                                 placeholder="Message..."
                                 className="bg-transparent outline-none hover:outline-none grow"
                             />
@@ -386,12 +472,9 @@ console.log('updater',updater);
                                 }}
                             />
                         </form>
-
                     </div>
                 </div>
-                
             </div>
-           
         </div>
     );
 };
